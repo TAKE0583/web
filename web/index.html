@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4択クイズ</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .quiz-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .question {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .options {
+            display: grid;
+            gap: 10px;
+        }
+        .option {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #000;
+        }
+        .option:hover {
+            background-color: #e9ecef;
+        }
+        .option.correct {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .option.incorrect {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .score {
+            font-size: 18px;
+            margin-top: 20px;
+            text-align: right;
+        }
+        .file-input {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .question-count {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .question-count input {
+            width: 60px;
+            padding: 5px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <h1>4択クイズ</h1>
+        <div class="file-input">
+            <div class="question-count">
+                <label for="questionCount">出題数:</label>
+                <input type="number" id="questionCount" min="1" value="5">
+            </div>
+            <button onclick="loadQuestions()">クイズを開始</button>
+        </div>
+        <div id="loading" class="loading">読み込み中...</div>
+        <div id="question" class="question"></div>
+        <div id="options" class="options"></div>
+        <div id="score" class="score"></div>
+    </div>
+
+    <script>
+        let questions = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let selectedQuestions = [];
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function loadQuestions() {
+            const questionCount = parseInt(document.getElementById('questionCount').value);
+            if (isNaN(questionCount) || questionCount < 1) {
+                alert('有効な問題数を入力してください。');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+
+            fetch('mondai.csv')
+                .then(response => response.text())
+                .then(csv => {
+                    const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
+                    questions = [];
+
+                    // 正規表現で1行目の必須問題番号を正確に取得
+                    const firstData = lines[1].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+                    let requiredQuestionNumbers = [];
+                    if (firstData && firstData[6]) {
+                        requiredQuestionNumbers = firstData[6]
+                            .replace(/"/g, '') // ダブルクォート除去
+                            .split(',')
+                            .map(num => parseInt(num.trim()))
+                            .filter(num => !isNaN(num));
+                    }
+
+                    console.log('必須問題番号:', requiredQuestionNumbers); // デバッグ確認用
+
+                    // ヘッダー行をスキップして問題を読み込む
+                    for (let i = 1; i < lines.length; i++) {
+                        const data = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+                        if (!data || data.length < 6) continue; // 6列以上なければスキップ
+
+                        const [questionText, option1, option2, option3, option4, correct] = data;
+                        const questionNumber = parseInt(questionText.replace(/[^0-9]/g, ''));
+                        if (!isNaN(questionNumber)) {
+                            questions.push({
+                                question: questionText,
+                                options: [option1, option2, option3, option4],
+                                correct: parseInt(correct) - 1,
+                                number: questionNumber
+                            });
+                        }
+                    }
+
+                    if (questions.length > 0) {
+                        if (questionCount > questions.length) {
+                            alert(`問題数が多すぎます。利用可能な問題数は${questions.length}問です。`);
+                            document.getElementById('loading').style.display = 'none';
+                            return;
+                        }
+
+                        // 必須問題を取り出し
+                        const requiredQuestions = questions.filter(q => requiredQuestionNumbers.includes(q.number));
+                        console.log('必須問題:', requiredQuestions);
+
+                        if (requiredQuestions.length < requiredQuestionNumbers.length) {
+                            alert(`一部の必須問題（${requiredQuestionNumbers.join(', ')}）が見つかりませんでした。`);
+                            document.getElementById('loading').style.display = 'none';
+                            return;
+                        }
+
+                        // 必須以外をシャッフル
+                        const otherQuestions = questions.filter(q => !requiredQuestionNumbers.includes(q.number));
+                        shuffleArray(otherQuestions);
+
+                        // 必須問題 + ランダム問題
+                        selectedQuestions = [...requiredQuestions];
+                        const remainingCount = questionCount - requiredQuestions.length;
+                        if (remainingCount > 0) {
+                            selectedQuestions = selectedQuestions.concat(otherQuestions.slice(0, remainingCount));
+                        }
+
+                        shuffleArray(selectedQuestions);
+                        currentQuestion = 0;
+                        score = 0;
+                        displayQuestion();
+                    } else {
+                        alert('問題データが見つかりませんでした。');
+                    }
+                })
+                .catch(error => {
+                    alert('ファイルの読み込みに失敗しました。');
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    document.getElementById('loading').style.display = 'none';
+                });
+        }
+
+        function displayQuestion() {
+            const question = selectedQuestions[currentQuestion];
+            document.getElementById('question').textContent = `問題 ${currentQuestion + 1}/${selectedQuestions.length}: ${question.question}`;
+
+            const optionsContainer = document.getElementById('options');
+            optionsContainer.innerHTML = '';
+
+            // 選択肢をシャッフル（正解のインデックス保持用）
+            const shuffledOptions = question.options.map((option, index) => ({
+                text: option,
+                isCorrect: index === question.correct
+            }));
+            shuffleArray(shuffledOptions); // ここで選択肢シャッフル！
+
+            shuffledOptions.forEach((optionObj, index) => {
+                const button = document.createElement('div');
+                button.className = 'option';
+                button.textContent = optionObj.text;
+                button.onclick = () => checkAnswer(optionObj.isCorrect, index);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function checkAnswer(isCorrect, selectedIndex) {
+            const options = document.querySelectorAll('.option');
+            options.forEach(option => option.style.pointerEvents = 'none');
+
+            if (isCorrect) {
+                options[selectedIndex].classList.add('correct');
+                score++;
+            } else {
+                options[selectedIndex].classList.add('incorrect');
+                // 正解だった選択肢を探して色付け
+                options.forEach(option => {
+                    if (option.textContent === selectedQuestions[currentQuestion].options[selectedQuestions[currentQuestion].correct]) {
+                        option.classList.add('correct');
+                    }
+                });
+            }
+
+            document.getElementById('score').textContent = `スコア: ${score}/${currentQuestion + 1}`;
+
+            setTimeout(() => {
+                currentQuestion++;
+                if (currentQuestion < selectedQuestions.length) {
+                    displayQuestion();
+                } else {
+                    document.getElementById('question').textContent = 'クイズ終了！';
+                    document.getElementById('options').innerHTML = '';
+                    document.getElementById('score').textContent = `最終スコア: ${score}/${selectedQuestions.length}`;
+                }
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
