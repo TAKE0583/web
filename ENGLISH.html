@@ -176,6 +176,23 @@
             background-color: #6c757d;
             cursor: not-allowed;
         }
+        .progress-container {
+            width: 100%;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            transition: width 0.3s ease;
+            text-align: center;
+            color: white;
+            line-height: 20px;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -238,6 +255,9 @@
             </div>
             <div id="loading" class="loading">読み込み中...</div>
             <div id="question" class="question"></div>
+            <div class="progress-container">
+                <div id="progressBar" class="progress-bar">0%</div>
+            </div>
             <div id="options" class="options"></div>
             <button id="nextButton" class="next-button" onclick="nextQuestion()">次へ</button>
             <div id="chartContainer" class="chart-container"></div>
@@ -268,11 +288,10 @@
         let selectedQuestions = [];
         let partsOfSpeechStats = {};
         let dontKnowStats = {};
-        let isDontKnowSelected = false;
-        let isDebugMode = false;
-        let showAnswer = true;
         let selectedOption = null;
         let isDontKnow = false;
+        let isDebugMode = false;
+        let showAnswer = true;
     
         function parseCSVLine(line) {
             const result = [];
@@ -329,7 +348,6 @@
                     questions = [];
                     partsOfSpeechStats = {};
                     dontKnowStats = {};
-                    isDontKnowSelected = false;
     
                     // 指定した範囲内の問題のみを抽出
                     for (let i = startIndex; i <= endIndex; i++) {
@@ -385,6 +403,8 @@
                 document.getElementById('question').innerText = 'クイズ終了！';
                 document.getElementById('options').innerHTML = '';
                 document.getElementById('nextButton').style.display = 'none';
+                // プログレスバーを100%に設定
+                updateProgressBar(100);
                 // showRadarChart();
                 
                 // スコア表示を追加
@@ -454,9 +474,6 @@
             };
             optionsContainer.appendChild(dontKnowButton);
 
-            // 選択状態をリセット
-            selectedOption = null;
-            isDontKnow = false;
             document.getElementById('nextButton').style.display = 'none';
         }
 
@@ -472,22 +489,27 @@
             if (isDontKnow) {
                 const dontKnowButton = document.querySelector('.option.dont-know');
                 dontKnowButton.classList.add('selected');
+                isDontKnow = true;
+                selectedOption = null;
             } else {
                 const selectedElement = Array.from(options).find(option => option.innerText === selectedOption);
                 if (selectedElement) {
                     selectedElement.classList.add('selected');
+                    isDontKnow = false;
+                    selectedOption = selectedOption;
                 }
             }
-
-            // 選択状態を保存（グローバル変数に直接代入）
-            selectedOption = selectedOption;
-            isDontKnow = isDontKnow;
-
             // デバッグ用の出力を追加
             console.log('選択した答え（保存時）:', selectedOption);
 
             // 次へボタンを表示
             document.getElementById('nextButton').style.display = 'block';
+        }
+
+        function updateProgressBar(progress) {
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = `${progress}%`;
+            progressBar.textContent = `${progress}%`;
         }
 
         function nextQuestion() {
@@ -509,6 +531,9 @@
 
             // 次の問題へ
             currentQuestion++;
+            // 進捗率を更新
+            const progress = Math.round((currentQuestion / selectedQuestions.length) * 100);
+            updateProgressBar(progress);
             displayQuestion();
         }
 
