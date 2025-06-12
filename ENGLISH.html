@@ -480,11 +480,11 @@
             }
 
             // 選択状態を保存（グローバル変数に直接代入）
-            window.selectedOption = selectedOption;
-            window.isDontKnow = isDontKnow;
+            selectedOption = selectedOption;
+            isDontKnow = isDontKnow;
 
             // デバッグ用の出力を追加
-            console.log('選択した答え（保存時）:', window.selectedOption);
+            console.log('選択した答え（保存時）:', selectedOption);
 
             // 次へボタンを表示
             document.getElementById('nextButton').style.display = 'block';
@@ -494,15 +494,15 @@
             const currentQuestionData = selectedQuestions[currentQuestion];
             
             // デバッグ用の出力を追加
-            console.log('選択した答え:', window.selectedOption);
+            console.log('選択した答え:', selectedOption);
             console.log('正解:', currentQuestionData.answer);
-            console.log('比較結果:', window.selectedOption === currentQuestionData.answer);
+            console.log('比較結果:', selectedOption === currentQuestionData.answer);
             
-            if (window.isDontKnow) {
+            if (isDontKnow) {
                 // わからないを選択した場合
             } else {
                 // 通常の選択肢を選択した場合
-                if (window.selectedOption === currentQuestionData.answer) {
+                if (selectedOption === currentQuestionData.answer) {
                     score++;
                 }
             }
