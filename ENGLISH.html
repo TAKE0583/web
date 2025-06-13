@@ -288,8 +288,6 @@
         let selectedQuestions = [];
         let partsOfSpeechStats = {};
         let dontKnowStats = {};
-        let selectedOption = null;
-        let isDontKnow = false;
         let isDebugMode = false;
         let showAnswer = true;
     
@@ -489,18 +487,18 @@
             if (isDontKnow) {
                 const dontKnowButton = document.querySelector('.option.dont-know');
                 dontKnowButton.classList.add('selected');
-                isDontKnow = true;
-                selectedOption = null;
+                window.isDontKnow = true;
+                window.selectedOption = null;
             } else {
                 const selectedElement = Array.from(options).find(option => option.innerText === selectedOption);
                 if (selectedElement) {
                     selectedElement.classList.add('selected');
-                    isDontKnow = false;
-                    selectedOption = selectedOption;
+                    window.isDontKnow = false;
+                    window.selectedOption = selectedOption;
                 }
             }
             // デバッグ用の出力を追加
-            console.log('選択した答え（保存時）:', selectedOption);
+            console.log('選択した答え（保存時）:', window.selectedOption);
 
             // 次へボタンを表示
             document.getElementById('nextButton').style.display = 'block';
@@ -516,15 +514,15 @@
             const currentQuestionData = selectedQuestions[currentQuestion];
             
             // デバッグ用の出力を追加
-            console.log('選択した答え:', selectedOption);
+            console.log('選択した答え:', window.selectedOption);
             console.log('正解:', currentQuestionData.answer);
-            console.log('比較結果:', selectedOption === currentQuestionData.answer);
+            console.log('比較結果:', window.selectedOption === currentQuestionData.answer);
             
-            if (isDontKnow) {
+            if (window.isDontKnow) {
                 // わからないを選択した場合
             } else {
                 // 通常の選択肢を選択した場合
-                if (selectedOption === currentQuestionData.answer) {
+                if (window.selectedOption === currentQuestionData.answer) {
                     score++;
                 }
             }
