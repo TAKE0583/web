@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設定</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .settings-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .file-input {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .file-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .file-selector label {
+            margin-right: 5px;
+        }
+        .question-count {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .question-count input {
+            width: 60px;
+            padding: 5px;
+        }
+        .debug-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .start-button {
+            width: 100%;
+            padding: 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .start-button:hover {
+            background-color: #0056b3;
+        }
+        .start-button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .settings-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .back-button {
+            padding: 8px 15px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+            <div class="settings-container">
+            <div class="settings-header">
+                <button class="back-button" onclick="goBack()">← 戻る</button>
+                <h1>4択クイズ設定</h1>
+            </div>
+        <div class="file-input">
+            <div class="file-selector">
+                <label>問題ファイル:</label>
+                <select id="fileSelect">
+                    <option value="CSV/ENG_J1_fix.csv">中学1年生用</option>
+                    <option value="CSV/ENG_J2_fix.csv">中学2年生用</option>
+                    <option value="CSV/ENG_J3_fix.csv">中学3年生用</option>
+                </select>
+            </div>
+            <div class="question-count">
+                <label for="questionCount">出題数:</label>
+                <button type="button" id="decreaseQuestionCount10" style="width:40px;">-10</button>
+                <button type="button" id="decreaseQuestionCount" style="width:40px;">-1</button>
+                <span id="questionCountDisplay" style="display:inline-block; width:40px; text-align:center;">5</span>
+                <button type="button" id="increaseQuestionCount" style="width:40px;">+1</button>
+                <button type="button" id="increaseQuestionCount10" style="width:40px;">+10</button>
+            </div>
+            <div class="debug-controls">
+                <label>
+                    <input type="checkbox" id="debugMode"> デバッグモード
+                </label>
+                <div id="debugQuestionNumber" style="display: none;">
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                        <label>
+                            <input type="radio" name="debugModeType" value="single" checked> 単一問題
+                        </label>
+                        <label>
+                            <input type="radio" name="debugModeType" value="range"> 範囲指定
+                        </label>
+                    </div>
+                    <div id="singleQuestionInput" style="display: flex; gap: 10px; align-items: center;">
+                        <label for="specificQuestion">問題番号:</label>
+                        <input type="number" id="specificQuestion" min="1" style="width: 60px;">
+                    </div>
+                    <div id="rangeQuestionInput" style="display: none; gap: 10px; align-items: center;">
+                        <label for="questionRangeStart">問題番号範囲:</label>
+                        <input type="number" id="questionRangeStart" min="1" style="width: 60px;">
+                        <span>～</span>
+                        <input type="number" id="questionRangeEnd" min="1" style="width: 60px;">
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label>
+                            <input type="checkbox" id="showAnswer" checked> 正解を表示
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button id="startButton" class="start-button" onclick="startQuiz()">クイズを開始</button>
+    </div>
+
+    <script>
+        let questionCount = 5;
+        const minQuestionCount = 1;
+        let maxQuestionCount = 0;
+        let isDebugMode = false;
+        let showAnswer = true;
+
+        function startQuiz() {
+            const settings = {
+                selectedFile: document.getElementById('fileSelect').value,
+                questionCount: questionCount,
+                isDebugMode: isDebugMode,
+                showAnswer: showAnswer,
+                debugModeType: document.querySelector('input[name="debugModeType"]:checked')?.value || 'single',
+                specificQuestion: document.getElementById('specificQuestion').value,
+                questionRangeStart: document.getElementById('questionRangeStart').value,
+                questionRangeEnd: document.getElementById('questionRangeEnd').value
+            };
+            
+            // 親ウィンドウにメッセージを送信
+            window.parent.postMessage({
+                type: 'START_QUIZ',
+                settings: settings
+            }, '*');
+        }
+
+        // デバッグモードの切り替え
+        document.getElementById('debugMode').addEventListener('change', function(e) {
+            isDebugMode = e.target.checked;
+            document.getElementById('debugQuestionNumber').style.display = isDebugMode ? 'block' : 'none';
+        });
+
+        // デバッグモードのタイプ切り替え
+        document.querySelectorAll('input[name="debugModeType"]').forEach(radio => {
+            radio.addEventListener('change', function(e) {
+                const isSingle = e.target.value === 'single';
+                document.getElementById('singleQuestionInput').style.display = isSingle ? 'flex' : 'none';
+                document.getElementById('rangeQuestionInput').style.display = isSingle ? 'none' : 'flex';
+            });
+        });
+
+        // 正解表示の切り替え
+        document.getElementById('showAnswer').addEventListener('change', function(e) {
+            showAnswer = e.target.checked;
+        });
+
+        // 出題数調整ボタンのイベントリスナー
+        document.addEventListener('DOMContentLoaded', function() {
+            const decreaseBtn = document.getElementById('decreaseQuestionCount');
+            const increaseBtn = document.getElementById('increaseQuestionCount');
+            const decreaseBtn10 = document.getElementById('decreaseQuestionCount10');
+            const increaseBtn10 = document.getElementById('increaseQuestionCount10');
+            const display = document.getElementById('questionCountDisplay');
+            
+            decreaseBtn.addEventListener('click', function() {
+                if (questionCount > minQuestionCount) {
+                    questionCount--;
+                    if (questionCount < minQuestionCount) questionCount = minQuestionCount;
+                    display.textContent = questionCount;
+                }
+            });
+            increaseBtn.addEventListener('click', function() {
+                if (questionCount < maxQuestionCount) {
+                    questionCount++;
+                    if (questionCount > maxQuestionCount) questionCount = maxQuestionCount;
+                    display.textContent = questionCount;
+                }
+            });
+            decreaseBtn10.addEventListener('click', function() {
+                if (questionCount > minQuestionCount) {
+                    questionCount -= 10;
+                    if (questionCount < minQuestionCount) questionCount = minQuestionCount;
+                    display.textContent = questionCount;
+                }
+            });
+            increaseBtn10.addEventListener('click', function() {
+                if (questionCount < maxQuestionCount) {
+                    questionCount += 10;
+                    if (questionCount > maxQuestionCount) questionCount = maxQuestionCount;
+                    display.textContent = questionCount;
+                }
+            });
+        });
+
+        // 親ウィンドウからのメッセージを受信
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'UPDATE_MAX_QUESTIONS') {
+                maxQuestionCount = event.data.maxQuestions;
+                if (questionCount > maxQuestionCount) {
+                    questionCount = maxQuestionCount;
+                    document.getElementById('questionCountDisplay').textContent = questionCount;
+                }
+            }
+        });
+
+        function goBack() {
+            // 親ウィンドウに戻るメッセージを送信
+            window.parent.postMessage({
+                type: 'GO_BACK'
+            }, '*');
+        }
+    </script>
+</body>
+</html> 
