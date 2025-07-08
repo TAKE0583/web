@@ -34,6 +34,15 @@
             display: grid;
             gap: 10px;
         }
+        .options.portrait {
+            grid-template-columns: 1fr;
+        }
+        .options.landscape {
+            grid-template-columns: 1fr 1fr;
+        }
+        .option.dont-know.landscape {
+            grid-column: 1 / span 2;
+        }
         .option {
             padding: 15px;
             background-color: #f8f9fa;
@@ -42,6 +51,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             color: #000;
+            text-align: center;
         }
         .option:hover {
             background-color: #e9ecef;
@@ -588,28 +598,8 @@
             // CSVの4-6列目を選択肢として使用し、正解と混ぜてシャッフル
             const options = [...questionData.choices]; // questionData.choices には既にCSVの選択肢が入っている
             shuffleArray(options);
+            renderOptions(options, questionData.answer);
         
-            const optionsContainer = document.getElementById('options');
-            optionsContainer.innerHTML = '';
-        
-            // 通常の選択肢を表示
-            options.forEach(option => {
-                const div = document.createElement('div');
-                div.className = 'option';
-                div.innerText = option;
-                div.onclick = () => selectOption(option, questionData.answer, false);
-                optionsContainer.appendChild(div);
-            });
-
-            // 「わからない」ボタンを追加
-            const dontKnowButton = document.createElement('div');
-            dontKnowButton.className = 'option dont-know';
-            dontKnowButton.innerText = 'わからない';
-            dontKnowButton.onclick = () => {
-                selectOption(null, questionData.answer, true);
-            };
-            optionsContainer.appendChild(dontKnowButton);
-
             document.getElementById('nextButton').style.display = 'none';
         }
 
@@ -887,6 +877,43 @@
             }
         });
 
+        function getOrientation() {
+            return window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+        }
+
+        function renderOptions(options, correctAnswer) {
+            const optionsContainer = document.getElementById('options');
+            optionsContainer.innerHTML = '';
+            const orientation = getOrientation();
+            optionsContainer.className = 'options ' + orientation;
+
+            options.forEach(option => {
+                const div = document.createElement('div');
+                div.className = 'option';
+                div.innerText = option;
+                div.onclick = () => selectOption(option, correctAnswer, false);
+                optionsContainer.appendChild(div);
+            });
+
+            // 「わからない」ボタン
+            const dontKnowButton = document.createElement('div');
+            dontKnowButton.className = 'option dont-know' + (orientation === 'landscape' ? ' landscape' : '');
+            dontKnowButton.innerText = 'わからない';
+            dontKnowButton.onclick = () => {
+                selectOption(null, correctAnswer, true);
+            };
+            optionsContainer.appendChild(dontKnowButton);
+        }
+
+        // 画面リサイズ時に再描画
+        window.addEventListener('resize', () => {
+            if (typeof selectedQuestions !== 'undefined' && selectedQuestions.length > 0 &&
+                typeof currentQuestion !== 'undefined' && currentQuestion < selectedQuestions.length) {
+                const questionData = selectedQuestions[currentQuestion];
+                const options = [...questionData.choices];
+                renderOptions(options, questionData.answer);
+            }
+        });
 
     </script>
 </body>
