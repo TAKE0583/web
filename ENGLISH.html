@@ -278,6 +278,7 @@
 
     <div id="quizScreen" class="quiz-content">
         <div class="quiz-container">
+            <div id="timer" style="position: absolute; top: 10px; left: 20px; font-size: 20px; font-weight: bold; display: none; z-index: 1000;">00:00</div>
             <div class="traffic-light-container">
                 <div class="traffic-light">
                     <div id="lamp1" class="lamp"></div>
@@ -343,6 +344,25 @@
         let questionCount = 5;
         const minQuestionCount = 1;
         let maxQuestionCount = 0; // 動的に設定するため初期値を0に
+    
+        let timerInterval = null;
+        let elapsedSeconds = 0;
+        function startTimer() {
+            elapsedSeconds = 0;
+            document.getElementById('timer').textContent = '00:00';
+            document.getElementById('timer').style.display = 'block';
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                elapsedSeconds++;
+                const min = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
+                const sec = String(elapsedSeconds % 60).padStart(2, '0');
+                document.getElementById('timer').textContent = `${min}:${sec}`;
+            }, 1000);
+        }
+        function stopTimer() {
+            document.getElementById('timer').style.display = 'none';
+            if (timerInterval) clearInterval(timerInterval);
+        }
     
         function parseCSVLine(line) {
             const result = [];
@@ -538,6 +558,7 @@
                     }
     
                     document.getElementById('loading').style.display = 'none';
+                    startTimer(); // 問題が読み込まれたらタイマーを開始
                 })
                 .catch(error => {
                     console.error('エラー:', error);
@@ -548,6 +569,8 @@
     
         function displayQuestion() {
             if (currentQuestion >= selectedQuestions.length) {
+                stopTimer();
+                document.getElementById('progressBar').style.display = 'none';
                 document.getElementById('question').innerText = '終了！';
                 document.getElementById('question').style.textAlign = 'center';
                 document.getElementById('options').innerHTML = '';
@@ -569,6 +592,7 @@
                 
                 return;
             }
+            document.getElementById('progressBar').style.display = 'block';
         
             const questionData = selectedQuestions[currentQuestion];
             const questionContainer = document.getElementById('question');
@@ -717,8 +741,11 @@
                 document.getElementById('nextButton').style.display = 'none';
                 // プログレスバーをリセット
                 updateProgressBar(0);
+                startTimer(); // リトライしたらタイマーを再開
             };
             document.getElementById('question').appendChild(retryButton);
+            document.getElementById('progressBar').style.display = 'none'; // リトライボタンを表示したらプログレスバーを非表示に
+            stopTimer(); // リトライボタンを表示したらタイマーを停止
         }
 
         // iframeからのメッセージを受信
@@ -766,6 +793,8 @@
         }
 
         function endQuizEarly() {
+            stopTimer();
+            document.getElementById('progressBar').style.display = 'none';
             document.getElementById('question').innerText = '赤信号が3つ点灯しました！';
             document.getElementById('question').style.textAlign = 'center';
             document.getElementById('options').innerHTML = '';
