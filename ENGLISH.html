@@ -279,7 +279,6 @@
     <div id="quizScreen" class="quiz-content">
         <div class="quiz-container">
             <div class="traffic-light-container">
-                <div class="traffic-light-label">赤信号システム</div>
                 <div class="traffic-light">
                     <div id="lamp1" class="lamp"></div>
                     <div id="lamp2" class="lamp"></div>
@@ -293,7 +292,7 @@
                         <span>設定</span>
                     </div>
                     <div class="start-menu">
-                        <h1>4択クイズ</h1>
+                        <h1>問題</h1>
                         <button class="start-quiz-button" onclick="startDefaultQuiz()">問題を開始</button>
                     </div>
                 </div>
@@ -549,7 +548,8 @@
     
         function displayQuestion() {
             if (currentQuestion >= selectedQuestions.length) {
-                document.getElementById('question').innerText = 'クイズ終了！';
+                document.getElementById('question').innerText = '終了！';
+                document.getElementById('question').style.textAlign = 'center';
                 document.getElementById('options').innerHTML = '';
                 document.getElementById('nextButton').style.display = 'none';
                 // プログレスバーを100%に設定
@@ -766,7 +766,8 @@
         }
 
         function endQuizEarly() {
-            document.getElementById('question').innerText = '赤信号が3つ点灯しました！クイズ終了！';
+            document.getElementById('question').innerText = '赤信号が3つ点灯しました！';
+            document.getElementById('question').style.textAlign = 'center';
             document.getElementById('options').innerHTML = '';
             document.getElementById('nextButton').style.display = 'none';
             

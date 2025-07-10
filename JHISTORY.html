@@ -443,6 +443,7 @@
 
             if (currentQuestion >= selectedQuestions.length) {
                 document.getElementById('question').innerText = 'クイズ終了！';
+                document.getElementById('question').style.textAlign = 'center';
                 document.getElementById('answerInputContainer').style.display = 'none';
                 document.getElementById('nextButton').style.display = 'none';
                 updateProgressBar(100);
