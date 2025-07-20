@@ -74,8 +74,8 @@
             background: #e3eafc;
         }
         .option.selected {
-            background: linear-gradient(90deg, #28a745 60%, #43e97b 100%);
-            border-color: #1e7e34;
+            background: linear-gradient(90deg, #007bff 60%, #0056b3 100%);
+            border-color: #0056b3;
             color: #fff;
         }
         .option.correct {
@@ -162,7 +162,29 @@
             max-width: 600px;
             margin: 20px auto;
         }
-        .next-button, .submit-answer, .password-button {
+        .next-button {
+            border-radius: 12px;
+            font-size: 18px;
+            padding: 18px;
+            font-weight: 500;
+            background: #f7faff;
+            border: 2px solid #e3eafc;
+            color: #007bff;
+            cursor: pointer;
+            transition: background 0.2s, border 0.2s;
+            width: 100%;
+            text-align: center;
+        }
+        .next-button:hover {
+            background: #e3eafc;
+            border-color: #007bff;
+        }
+        .next-button:disabled {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .submit-answer, .password-button {
             border-radius: 25px;
             font-size: 17px;
             padding: 12px 0;
@@ -170,13 +192,9 @@
             box-shadow: 0 2px 8px rgba(0,123,255,0.08);
             transition: background 0.2s, color 0.2s;
         }
-        .next-button:hover, .submit-answer:hover, .password-button:hover {
+        .submit-answer:hover, .password-button:hover {
             background: #0056b3;
             color: #fff;
-        }
-        .next-button:disabled {
-            background-color: #6c757d;
-            cursor: not-allowed;
         }
         .progress-container {
             width: 100%;
@@ -189,6 +207,8 @@
             font-size: 14px;
             background: linear-gradient(90deg, #4CAF50 60%, #8BC34A 100%);
             box-shadow: 0 1px 6px rgba(76,175,80,0.10);
+            width: 0%;
+            transition: width 0.3s ease;
         }
         .traffic-light {
             display: flex;
@@ -273,30 +293,10 @@
         .settings-frame {
             width: 100%;
         }
-        .back-button {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            padding: 10px 15px;
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            z-index: 1001;
-            transition: background-color 0.3s ease;
-        }
-        .back-button:hover {
-            background-color: #5a6268;
-        }
-        .back-button.hidden {
-            display: none;
-        }
+
     </style>
 </head>
 <body>
-    <button id="backButton" class="back-button hidden" onclick="goBack()">← 戻る</button>
     <div id="passwordScreen" class="password-container">
         <div class="password-box">
             <h1>パスワードを入力</h1>
@@ -337,7 +337,7 @@
                 <div id="progressBar" class="progress-bar">0%</div>
             </div>
             <div id="options" class="options"></div>
-            <button id="nextButton" class="next-button" onclick="nextQuestion()">次へ</button>
+            <button id="nextButton" class="next-button" onclick="nextQuestion()" style="display: none;">次へ</button>
             <div id="chartContainer" class="chart-container"></div>
         </div>
     </div>
@@ -965,20 +965,7 @@
             }
         });
 
-        // 戻るボタンの表示/非表示制御
-        function showBackButton() {
-            document.getElementById('backButton').classList.remove('hidden');
-        }
 
-        function hideBackButton() {
-            document.getElementById('backButton').classList.add('hidden');
-        }
-
-        function goBack() {
-            if (confirm('本当にページを離れますか？進行中のクイズは保存されません。')) {
-                window.history.back();
-            }
-        }
 
         // ページ離脱時の警告
         window.addEventListener('beforeunload', function(e) {
@@ -991,14 +978,13 @@
             }
         });
 
-        // パスワード認証後に戻るボタンを表示
+        // パスワード認証
         function checkPassword() {
             const password = document.getElementById('passwordInput').value;
             const correctPassword = 'admin'; // パスワード設定
             if (password === correctPassword) {
                 document.getElementById('passwordScreen').style.display = 'none';
                 document.getElementById('quizScreen').style.display = 'block';
-                showBackButton(); // 戻るボタンを表示
             } else {
                 document.getElementById('errorMessage').style.display = 'block';
             }
