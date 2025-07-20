@@ -7,17 +7,18 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f0f0f0;
+            background: linear-gradient(120deg, #f0f4f8 0%, #e9f0ff 100%);
         }
         .quiz-container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+            padding: 32px 28px 28px 28px;
+            margin-top: 32px;
         }
         .question {
             font-size: 24px;
@@ -170,14 +171,15 @@
         }
         .progress-bar {
             width: 0%;
-            height: 20px;
-            background-color: #4CAF50;
+            height: 22px;
+            background: linear-gradient(90deg, #4CAF50 60%, #8BC34A 100%);
             border-radius: 5px;
             transition: width 0.3s ease;
             text-align: center;
             color: white;
             line-height: 20px;
-            font-size: 12px;
+            font-size: 14px;
+            box-shadow: 0 1px 6px rgba(76,175,80,0.10);
         }
         .answer-feedback {
             font-size: 18px;
@@ -185,9 +187,64 @@
             margin-bottom: 10px;
             text-align: center;
         }
+        .option {
+            border-radius: 12px;
+            font-size: 18px;
+            padding: 18px;
+            background: #f7faff;
+            border: 2px solid #e3eafc;
+            transition: background 0.2s, border 0.2s;
+        }
+        .option.selected {
+            background: linear-gradient(90deg, #28a745 60%, #43e97b 100%);
+            border-color: #1e7e34;
+            color: #fff;
+        }
+        .option:hover {
+            background: #e3eafc;
+        }
+        #timer {
+            position: absolute;
+            top: 18px;
+            left: 32px;
+            font-size: 22px;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(90deg, #007bff 60%, #00c6ff 100%);
+            padding: 7px 22px;
+            border-radius: 30px;
+            box-shadow: 0 2px 12px rgba(0,123,255,0.15);
+            letter-spacing: 2px;
+            display: none;
+            z-index: 1000;
+            border: none;
+            transition: background 0.3s, color 0.3s;
+        }
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 15px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 1001;
+            transition: background-color 0.3s ease;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+        .back-button.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
+    <button id="backButton" class="back-button hidden" onclick="goBack()">← 戻る</button>
     <div id="passwordScreen" class="password-container">
         <div class="password-box">
             <h1>パスワードを入力</h1>
@@ -266,17 +323,7 @@
     </div>
 
     <script>
-        // パスワードチェック関数（ここはそのまま）
-        function checkPassword() {
-            const password = document.getElementById('passwordInput').value;
-            const correctPassword = 'admin'; // パスワード設定
-            if (password === correctPassword) {
-                document.getElementById('passwordScreen').style.display = 'none';
-                document.getElementById('quizScreen').style.display = 'block';
-            } else {
-                document.getElementById('errorMessage').style.display = 'block';
-            }
-        }
+
         document.getElementById('passwordInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 checkPassword();
@@ -646,6 +693,46 @@
                 correct: correct.slice(0, firstDiff) + '<span style="background:#d6ffd6;">' + correct.slice(firstDiff, correctEnd) + '</span>' + correct.slice(correctEnd)
             };
         }
+
+        // 戻るボタンの表示/非表示制御
+        function showBackButton() {
+            document.getElementById('backButton').classList.remove('hidden');
+        }
+
+        function hideBackButton() {
+            document.getElementById('backButton').classList.add('hidden');
+        }
+
+        function goBack() {
+            if (confirm('本当にページを離れますか？進行中のクイズは保存されません。')) {
+                window.history.back();
+            }
+        }
+
+        // ページ離脱時の警告
+        window.addEventListener('beforeunload', function(e) {
+            // クイズが進行中の場合は警告を表示
+            if (document.getElementById('quizScreen').style.display === 'block' && 
+                document.getElementById('answerInputContainer').style.display === 'flex') {
+                e.preventDefault();
+                e.returnValue = 'ページを離れると進行中のクイズは保存されません。';
+                return e.returnValue;
+            }
+        });
+
+        // パスワード認証後に戻るボタンを表示
+        function checkPassword() {
+            const password = document.getElementById('passwordInput').value;
+            const correctPassword = 'admin'; // パスワード設定
+            if (password === correctPassword) {
+                document.getElementById('passwordScreen').style.display = 'none';
+                document.getElementById('quizScreen').style.display = 'block';
+                showBackButton(); // 戻るボタンを表示
+            } else {
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+
     </script>
 </body>
 </html> 

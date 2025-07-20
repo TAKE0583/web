@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4択クイズ</title>
+    <title>数学4択クイズ</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         #timer {
@@ -42,9 +42,17 @@
         }
         .question-image {
             max-width: 100%;
-            max-height: 200px;
-            margin: 10px 0;
-            border-radius: 5px;
+            max-height: 300px;
+            margin: 15px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .question-image-container {
+            text-align: center;
+            margin: 15px 0;
         }
         .options {
             display: grid;
@@ -323,7 +331,7 @@
                         <span>設定</span>
                     </div>
                     <div class="start-menu">
-                        <h1>問題</h1>
+                        <h1>数学クイズ</h1>
                         <button class="start-quiz-button" onclick="startDefaultQuiz()">問題を開始</button>
                     </div>
                 </div>
@@ -616,9 +624,15 @@
         
             const questionData = selectedQuestions[currentQuestion];
             const questionContainer = document.getElementById('question');
-            // 改行を<br>タグに変換して表示
+            
+            // 問題文をクリア
+            questionContainer.innerHTML = '';
+            
+            // 問題番号と問題文を追加
+            const questionText = document.createElement('div');
             const formattedQuestion = questionData.question.replace(/\\n/g, '<br>');
-            questionContainer.innerHTML = `問題 ${currentQuestion + 1}: ${formattedQuestion}`;
+            questionText.innerHTML = `問題 ${currentQuestion + 1}: ${formattedQuestion}`;
+            questionContainer.appendChild(questionText);
             
             // デバッグモードの場合、正解を表示
             if (isDebugMode && showAnswer) {
@@ -631,12 +645,31 @@
             }
             
             // 画像がある場合は表示
-            if (questionData.image) {
+            if (questionData.image && questionData.image.trim() !== '') {
+                const imageContainer = document.createElement('div');
+                imageContainer.className = 'question-image-container';
+                
                 const img = document.createElement('img');
                 img.src = questionData.image;
                 img.className = 'question-image';
                 img.alt = '問題画像';
-                questionContainer.appendChild(img);
+                img.onerror = function() {
+                    // 画像読み込みエラー時の処理
+                    this.style.display = 'none';
+                    const errorMsg = document.createElement('div');
+                    errorMsg.style.color = '#dc3545';
+                    errorMsg.style.fontSize = '14px';
+                    errorMsg.style.marginTop = '10px';
+                    errorMsg.textContent = '画像の読み込みに失敗しました';
+                    imageContainer.appendChild(errorMsg);
+                };
+                img.onload = function() {
+                    // 画像読み込み成功時の処理
+                    this.style.display = 'block';
+                };
+                
+                imageContainer.appendChild(img);
+                questionContainer.appendChild(imageContainer);
             }
         
             // CSVの4-6列目を選択肢として使用し、正解と混ぜてシャッフル
@@ -787,7 +820,7 @@
         function startDefaultQuiz() {
             // デフォルト設定でクイズを開始
             const defaultSettings = {
-                selectedFile: 'CSV/ENG_J1_fix.csv',
+                selectedFile: 'CSV/MATH_J1.csv', // 数学用のCSVファイルに変更
                 questionCount: 5,
                 isDebugMode: false,
                 showAnswer: true,
@@ -1006,4 +1039,4 @@
 
     </script>
 </body>
-</html>
+</html> 
