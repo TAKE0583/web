@@ -947,7 +947,7 @@
             options.forEach(option => {
                 const div = document.createElement('div');
                 div.className = 'option';
-                div.innerText = option;
+                div.innerHTML = option; // ← innerTextからinnerHTMLに修正
                 div.onclick = () => selectOption(option, correctAnswer, false);
                 optionsContainer.appendChild(div);
             });
