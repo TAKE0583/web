@@ -1016,6 +1016,18 @@
             }
         }
 
+        // 全画面化完了時にも再描画
+        document.addEventListener('fullscreenchange', () => {
+          if (window.MathJax) {
+            MathJax.typesetPromise();
+          }
+        });
+
+        // 問題文・選択肢描画直後
+        if (window.MathJax) {
+          setTimeout(() => MathJax.typesetPromise(), 100);
+        }
+
     </script>
 </body>
 </html>
