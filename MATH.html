@@ -644,10 +644,20 @@
             
             // 画像がある場合は表示
             if (questionData.image && questionData.image.trim() !== '') {
+                console.log('画像パス:', questionData.image, '（trim後）', questionData.image.trim());
                 const img = document.createElement('img');
-                img.src = questionData.image;
+                img.src = questionData.image.trim();
                 img.className = 'question-image';
                 img.alt = '問題画像';
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    const errorMsg = document.createElement('div');
+                    errorMsg.style.color = '#dc3545';
+                    errorMsg.style.fontSize = '14px';
+                    errorMsg.style.marginTop = '10px';
+                    errorMsg.textContent = '画像の読み込みに失敗しました';
+                    questionContainer.appendChild(errorMsg);
+                };
                 questionContainer.appendChild(img);
             }
         
@@ -775,6 +785,8 @@
                 document.getElementById('nextButton').style.display = 'none';
                 // プログレスバーをリセット
                 updateProgressBar(0);
+                // タイマーを必ず非表示にする
+                document.getElementById('timer').style.display = 'none';
                 startTimer(); // リトライしたらタイマーを再開
             };
             document.getElementById('question').appendChild(retryButton);
@@ -813,9 +825,8 @@
         }
 
         function startDefaultQuiz() {
-            enterFullScreen();
-            // デフォルト設定でクイズを開始
-            const defaultSettings = {
+            // localStorageから設定を取得
+            let settings = {
                 selectedFile: 'CSV/MAT_J3.csv',
                 questionCount: 5,
                 isDebugMode: false,
@@ -825,7 +836,11 @@
                 questionRangeStart: '',
                 questionRangeEnd: ''
             };
-            loadQuestions(defaultSettings);
+            const saved = localStorage.getItem('mathQuizSettings');
+            if (saved) {
+                Object.assign(settings, JSON.parse(saved));
+            }
+            loadQuestions(settings);
         }
 
         function updateTrafficLight() {

@@ -240,6 +240,34 @@
             }
         });
 
+        function saveSettingsToLocalStorage() {
+            const settings = {
+                selectedFile: document.getElementById('fileSelect').value,
+                questionCount: Number(document.getElementById('questionCountDisplay').textContent),
+                // 必要に応じて他の設定も追加
+            };
+            localStorage.setItem('mathQuizSettings', JSON.stringify(settings));
+        }
+
+        // ファイル選択や出題数変更時に保存
+        const fileSelect = document.getElementById('fileSelect');
+        if (fileSelect) fileSelect.addEventListener('change', saveSettingsToLocalStorage);
+        const questionCountDisplay = document.getElementById('questionCountDisplay');
+        if (questionCountDisplay) {
+            // 出題数の増減ボタンのイベントリスナー内で呼ぶ
+            const updateAndSave = () => {
+                saveSettingsToLocalStorage();
+            };
+            const decreaseBtn = document.getElementById('decreaseQuestionCount');
+            const increaseBtn = document.getElementById('increaseQuestionCount');
+            const decreaseBtn10 = document.getElementById('decreaseQuestionCount10');
+            const increaseBtn10 = document.getElementById('increaseQuestionCount10');
+            if (decreaseBtn) decreaseBtn.addEventListener('click', updateAndSave);
+            if (increaseBtn) increaseBtn.addEventListener('click', updateAndSave);
+            if (decreaseBtn10) decreaseBtn10.addEventListener('click', updateAndSave);
+            if (increaseBtn10) increaseBtn10.addEventListener('click', updateAndSave);
+        }
+
         function goBack() {
             // 親ウィンドウに戻るメッセージを送信
             window.parent.postMessage({
