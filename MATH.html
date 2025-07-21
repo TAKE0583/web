@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4択クイズ</title>
+    <title>数学4択クイズ</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         #timer {
             position: absolute;
@@ -616,9 +617,13 @@
         
             const questionData = selectedQuestions[currentQuestion];
             const questionContainer = document.getElementById('question');
-            // 改行を<br>タグに変換して表示
+            // 問題文をクリア
+            questionContainer.innerHTML = '';
+            // 問題番号と問題文を追加
+            const questionText = document.createElement('div');
             const formattedQuestion = questionData.question.replace(/\\n/g, '<br>');
-            questionContainer.innerHTML = `問題 ${currentQuestion + 1}: ${formattedQuestion}`;
+            questionText.innerHTML = `問題 ${currentQuestion + 1}: ${formattedQuestion}`;
+            questionContainer.appendChild(questionText);
             
             // デバッグモードの場合、正解を表示
             if (isDebugMode && showAnswer) {
@@ -631,7 +636,7 @@
             }
             
             // 画像がある場合は表示
-            if (questionData.image) {
+            if (questionData.image && questionData.image.trim() !== '') {
                 const img = document.createElement('img');
                 img.src = questionData.image;
                 img.className = 'question-image';
@@ -644,6 +649,10 @@
             shuffleArray(options);
             renderOptions(options, questionData.answer);
         
+            // MathJaxで数式を再描画
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
             document.getElementById('nextButton').style.display = 'none';
         }
 
@@ -951,6 +960,10 @@
                 selectOption(null, correctAnswer, true);
             };
             optionsContainer.appendChild(dontKnowButton);
+            // MathJaxで数式を再描画
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
         }
 
         // 画面リサイズ時に再描画
