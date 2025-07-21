@@ -465,6 +465,7 @@
                     // 指定した範囲内の問題のみを抽出
                     for (let i = startIndex; i <= actualEndIndex; i++) {
                         const data = parseCSVLine(lines[i]);
+                        console.log('CSV行データ:', data);
                         // 問題番号が不正な場合はスキップ
                         if (data.length < 5 || isNaN(parseInt(data[0]))) continue;  // 最低限必要な列数チェックと問題番号の数値チェック
     
@@ -489,8 +490,9 @@
                             question: data[1],
                             choices: choices,
                             answer: choices[0],  // 選択肢1が正解
-                            image: data[6] || null
+                            image: data[7] ? data[7].trim() : null
                         });
+                        console.log('画像パス（push時）:', data[7]);
                     }
 
                     // questions配列を問題番号でソート（範囲指定時に順番を保証するため）
