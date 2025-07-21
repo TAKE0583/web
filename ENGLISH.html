@@ -703,15 +703,13 @@
                     updateTrafficLight();
                 }
             }
-
+            // ★ここで必ず加算
+            currentQuestion++;
             // 赤信号が3つ点灯した場合はクイズを終了
             if (wrongAnswers >= 3) {
                 endQuizEarly();
                 return;
             }
-
-            // 次の問題へ
-            currentQuestion++;
             // 進捗率を更新
             const progress = Math.round((currentQuestion / selectedQuestions.length) * 100);
             updateProgressBar(progress);
