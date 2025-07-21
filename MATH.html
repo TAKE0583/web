@@ -802,6 +802,10 @@
             } else if (elem.msRequestFullscreen) {
                 elem.msRequestFullscreen();
             }
+            // Safari対策: 全画面化直後に再描画
+            if (window.MathJax) {
+                setTimeout(() => MathJax.typesetPromise(), 500);
+            }
         }
 
         function startDefaultQuiz() {
