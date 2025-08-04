@@ -87,21 +87,28 @@
         .back-button:hover {
             background-color: #5a6268;
         }
+        .subject-indicator {
+            background: linear-gradient(90deg, #28a745, #20c997);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
             <div class="settings-container">
             <div class="settings-header">
                 <button class="back-button" onclick="goBack()">← 戻る</button>
-                <h1>4択クイズ設定</h1>
+                <h1>設定</h1>
+                <div class="subject-indicator" id="subjectIndicator"></div>
             </div>
         <div class="file-input">
             <div class="file-selector">
                 <label>問題ファイル:</label>
                 <select id="fileSelect">
-                    <option value="CSV/ENG_J1_fix.csv">中学1年生用</option>
-                    <option value="CSV/ENG_J2_fix.csv">中学2年生用</option>
-                    <option value="CSV/ENG_J3_fix.csv">中学3年生用</option>
+                    <!-- 科目別に動的に設定 -->
                 </select>
             </div>
             <div class="question-count">
@@ -151,10 +158,113 @@
         let maxQuestionCount = 0;
         let isDebugMode = false;
         let showAnswer = true;
+        let currentSubject = 'english'; // デフォルト
+
+        // URLパラメータから科目を判定
+        function getSubjectFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('subject') || 'english';
+        }
+
+        // 科目別のファイル選択肢を設定
+        function setupFileOptions(subject) {
+            const fileSelect = document.getElementById('fileSelect');
+            const subjectIndicator = document.getElementById('subjectIndicator');
+            
+            // 既存のオプションをクリア
+            fileSelect.innerHTML = '';
+            
+            if (subject === 'math') {
+                subjectIndicator.textContent = '数学';
+                subjectIndicator.style.background = 'linear-gradient(90deg, #dc3545, #fd7e14)';
+                
+                // 数学用のファイル選択肢
+                const mathOptions = [
+                    { value: 'CSV/MAT_J3.csv', text: '中学3年生用' }
+                ];
+                mathOptions.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option.value;
+                    opt.textContent = option.text;
+                    fileSelect.appendChild(opt);
+                });
+            } else if (subject === 'english') {
+                subjectIndicator.textContent = '英語';
+                subjectIndicator.style.background = 'linear-gradient(90deg, #007bff, #6610f2)';
+                
+                // 英語用のファイル選択肢（学年別）
+                const englishOptions = [
+                    { value: 'grade1', text: '中学1年生用 (ENG_J1)' },
+                    { value: 'grade2', text: '中学2年生用 (ENG_J1 + ENG_J2)' },
+                    { value: 'grade3', text: '中学3年生用 (ENG_J1 + ENG_J2 + ENG_J3)' }
+                ];
+                englishOptions.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option.value;
+                    opt.textContent = option.text;
+                    fileSelect.appendChild(opt);
+                });
+            } else if (subject === 'history') {
+                subjectIndicator.textContent = '記述式';
+                subjectIndicator.style.background = 'linear-gradient(90deg, #6f42c1, #e83e8c)';
+                
+                // 記述式用のファイル選択肢
+                const historyOptions = [
+                    { value: 'CSV/JHI.csv', text: '記述式問題' }
+                ];
+                historyOptions.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option.value;
+                    opt.textContent = option.text;
+                    fileSelect.appendChild(opt);
+                });
+            }
+        }
+
+        // 学年に応じたファイルリストを取得
+        function getFilesForGrade(grade) {
+            const fileMap = {
+                'grade1': ['CSV/ENG_J1_fix.csv'],
+                'grade2': ['CSV/ENG_J1_fix.csv', 'CSV/ENG_J2_fix.csv'],
+                'grade3': ['CSV/ENG_J1_fix.csv', 'CSV/ENG_J2_fix.csv', 'CSV/ENG_J3_fix.csv']
+            };
+            return fileMap[grade] || [grade]; // 学年以外の場合はそのまま返す
+        }
+
+        // 科目別の設定を読み込み
+        function loadSubjectSettings(subject) {
+            const storageKey = `${subject}QuizSettings`;
+            const saved = localStorage.getItem(storageKey);
+            if (saved) {
+                const settings = JSON.parse(saved);
+                questionCount = settings.questionCount || 5;
+                document.getElementById('questionCountDisplay').textContent = questionCount;
+                
+                // ファイル選択肢を設定した後に選択値を設定
+                setTimeout(() => {
+                    const fileSelect = document.getElementById('fileSelect');
+                    if (fileSelect && settings.selectedFile) {
+                        fileSelect.value = settings.selectedFile;
+                    }
+                }, 100);
+            }
+        }
 
         function startQuiz() {
+            const selectedGrade = document.getElementById('fileSelect').value;
+            let selectedFiles = [];
+            
+            // 英語の場合は学年に応じて複数ファイルを設定
+            if (currentSubject === 'english' && selectedGrade.startsWith('grade')) {
+                selectedFiles = getFilesForGrade(selectedGrade);
+            } else {
+                // その他の科目は単一ファイル
+                selectedFiles = [selectedGrade];
+            }
+            
             const settings = {
-                selectedFile: document.getElementById('fileSelect').value,
+                selectedFile: selectedGrade, // 後方互換性のため保持
+                selectedFiles: selectedFiles, // 新しい複数ファイル対応
                 questionCount: questionCount,
                 isDebugMode: isDebugMode,
                 showAnswer: showAnswer,
@@ -193,6 +303,11 @@
 
         // 出題数調整ボタンのイベントリスナー
         document.addEventListener('DOMContentLoaded', function() {
+            // 科目を判定して設定
+            currentSubject = getSubjectFromURL();
+            setupFileOptions(currentSubject);
+            loadSubjectSettings(currentSubject);
+            
             const decreaseBtn = document.getElementById('decreaseQuestionCount');
             const increaseBtn = document.getElementById('increaseQuestionCount');
             const decreaseBtn10 = document.getElementById('decreaseQuestionCount10');
@@ -244,9 +359,9 @@
             const settings = {
                 selectedFile: document.getElementById('fileSelect').value,
                 questionCount: Number(document.getElementById('questionCountDisplay').textContent),
-                // 必要に応じて他の設定も追加
             };
-            localStorage.setItem('mathQuizSettings', JSON.stringify(settings));
+            const storageKey = `${currentSubject}QuizSettings`;
+            localStorage.setItem(storageKey, JSON.stringify(settings));
         }
 
         // ファイル選択や出題数変更時に保存

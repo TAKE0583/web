@@ -242,59 +242,17 @@
     <div id="quizScreen" class="quiz-content">
         <div class="quiz-container">
             <h1>記述式クイズ</h1>
-            <div class="file-input">
-                <div class="file-selector">
-                    <label>問題ファイル:</label>
-                    <select id="fileSelect">
-                        <option value="CSV/JHI.csv">中学1年生用</option>
-                        <option value="CSV/ENG_J2_fix.csv">中学2年生用</option>
-                        <option value="CSV/ENG_J3_fix.csv">中学3年生用</option>
-                    </select>
-                </div>
-                <div class="question-count">
-                    <label for="questionCount">出題数:</label>
-                    <button type="button" id="decreaseQuestionCount10" style="width:40px;">-10</button>
-                    <button type="button" id="decreaseQuestionCount" style="width:40px;">-1</button>
-                    <span id="questionCountDisplay" style="display:inline-block; width:40px; text-align:center;">5</span>
-                    <button type="button" id="increaseQuestionCount" style="width:40px;">+1</button>
-                    <button type="button" id="increaseQuestionCount10" style="width:40px;">+10</button>
-                </div>
-                <div class="debug-controls" style="display: flex; gap: 10px; align-items: center;">
-                    <label>
-                        <input type="checkbox" id="debugMode"> デバッグモード
-                    </label>
-                    <div id="debugQuestionNumber" style="display: none;">
-                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                            <label>
-                                <input type="radio" name="debugModeType" value="single" checked> 単一問題
-                            </label>
-                            <label>
-                                <input type="radio" name="debugModeType" value="range"> 範囲指定
-                            </label>
-                        </div>
-                        <div id="singleQuestionInput" style="display: flex; gap: 10px; align-items: center;">
-                            <label for="specificQuestion">問題番号:</label>
-                            <input type="number" id="specificQuestion" min="1" style="width: 60px;">
-                        </div>
-                        <div id="rangeQuestionInput" style="display: none; gap: 10px; align-items: center;">
-                            <label for="questionRangeStart">問題番号範囲:</label>
-                            <input type="number" id="questionRangeStart" min="1" style="width: 60px;">
-                            <span>～</span>
-                            <input type="number" id="questionRangeEnd" min="1" style="width: 60px;">
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <label>
-                                <input type="checkbox" id="showAnswer" checked> 正解を表示
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <button onclick="startQuizWithFullScreen()" class="submit-answer">クイズを開始</button>
+            <div class="main-menu">
+                <button onclick="openSettings()" class="submit-answer">設定</button>
+                <button onclick="startDefaultQuiz()" class="submit-answer">クイズを開始</button>
+            </div>
+            <div id="settingsFrame" class="settings-frame" style="display: none;">
+                <iframe src="settings.html?subject=history" width="100%" height="400" frameborder="0"></iframe>
             </div>
             <div id="loading" class="loading">読み込み中...</div>
             <div id="question" class="question"></div>
             <div id="timer" style="position: absolute; top: 10px; left: 20px; font-size: 20px; font-weight: bold; display: none; z-index: 1000;">00:00</div>
-            <div class="progress-container">
+            <div class="progress-container" style="display: none;">
                 <div id="progressBar" class="progress-bar">0%</div>
             </div>
             <div id="answerInputContainer" class="answer-input-container" style="display:none;">
@@ -376,115 +334,7 @@
             if (timerInterval) clearInterval(timerInterval);
         }
     
-        function loadQuestions() {
-            const selectedFile = document.getElementById('fileSelect').value;
-            const startIndex = 2;
-            const chartContainer = document.getElementById('chartContainer');
-            chartContainer.innerHTML = '';
-    
-            document.getElementById('loading').style.display = 'block';
-            startTimer();
-    
-            fetch(selectedFile)
-                .then(response => response.text())
-                .then(csv => {
-                    const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
-                    questions = [];
-    
-                    const actualEndIndex = lines.length - 1;
-    
-                    for (let i = startIndex; i <= actualEndIndex; i++) {
-                        const data = parseCSVLine(lines[i]);
-                        if (data.length < 5 || isNaN(parseInt(data[0]))) continue;
-                        const choices = data.slice(2, 6)
-                            .filter(choice => choice)
-                            .map(choice => {
-                                choice = choice.trim();
-                                if (choice.startsWith('"') && choice.endsWith('"')) {
-                                    choice = choice.slice(1, -1);
-                                }
-                                if (choice.startsWith("'")) {
-                                    choice = choice.slice(1);
-                                }
-                                return choice;
-                            });
-                        if (choices.length === 0) continue;
-                        questions.push({
-                            number: parseInt(data[0]),
-                            question: data[1],
-                            answer: choices[0],
-                            image: data[6] || null
-                        });
-                    }
-                    questions.sort((a, b) => a.number - b.number);
-                    maxQuestionCount = questions.length;
-                    if (questionCount > maxQuestionCount) {
-                        questionCount = maxQuestionCount;
-                        document.getElementById('questionCountDisplay').textContent = questionCount;
-                    }
-                    if (maxQuestionCount === 0) {
-                        alert('問題データが正しくありません。または指定された範囲に問題がありません。');
-                        document.getElementById('loading').style.display = 'none';
-                        return;
-                    }
-                    if (isDebugMode && document.querySelector('input[name="debugModeType"]:checked')?.value === 'single') {
-                        const specificNumber = parseInt(document.getElementById('specificQuestion').value);
-                        if (isNaN(specificNumber) || specificNumber < minQuestionCount || specificNumber > maxQuestionCount) {
-                            alert(`有効な問題番号を入力してください (${minQuestionCount}～${maxQuestionCount})`);
-                            document.getElementById('loading').style.display = 'none';
-                            return;
-                        }
-                        const found = questions.find(q => q.number === specificNumber);
-                        if (found) {
-                            selectedQuestions = [found];
-                        } else {
-                            alert(`指定した問題番号(${specificNumber})が見つかりません。`);
-                            document.getElementById('loading').style.display = 'none';
-                            return;
-                        }
-                        currentQuestion = 0;
-                        score = 0;
-                        displayQuestion();
-                    } else if (isDebugMode && document.querySelector('input[name="debugModeType"]:checked')?.value === 'range') {
-                        const rangeStart = parseInt(document.getElementById('questionRangeStart').value);
-                        const rangeEnd = parseInt(document.getElementById('questionRangeEnd').value);
-                        if (isNaN(rangeStart) || isNaN(rangeEnd) || rangeStart < minQuestionCount || rangeEnd > maxQuestionCount || rangeEnd < rangeStart) {
-                            alert(`有効な問題番号の範囲を入力してください (${minQuestionCount}～${maxQuestionCount})`);
-                            document.getElementById('loading').style.display = 'none';
-                            return;
-                        }
-                        selectedQuestions = questions.filter(q => {
-                            const qNum = parseInt(q.number);
-                            return qNum >= rangeStart && qNum <= rangeEnd;
-                        });
-                        if (selectedQuestions.length === 0) {
-                            alert('指定された範囲に問題が見つかりません。');
-                            document.getElementById('loading').style.display = 'none';
-                            return;
-                        }
-                        currentQuestion = 0;
-                        score = 0;
-                        displayQuestion();
-                    } else {
-                        if (questionCount === 0) {
-                            alert('選択したファイルに有効な問題が見つかりませんでした。');
-                            document.getElementById('loading').style.display = 'none';
-                            return;
-                        }
-                        shuffleArray(questions);
-                        selectedQuestions = questions.slice(0, questionCount);
-                        currentQuestion = 0;
-                        score = 0;
-                        displayQuestion();
-                    }
-                    document.getElementById('loading').style.display = 'none';
-                })
-                .catch(error => {
-                    console.error('エラー:', error);
-                    alert('ファイルの読み込みに失敗しました。');
-                    document.getElementById('loading').style.display = 'none';
-                });
-        }
+        
 
         function displayQuestion() {
             document.getElementById('answerFeedback').innerText = '';
@@ -545,7 +395,7 @@
                 document.getElementById('question').appendChild(resultTable);
                 return;
             }
-            document.getElementById('progressBar').style.display = 'block';
+            document.querySelector('.progress-container').style.display = 'block';
             const questionData = selectedQuestions[currentQuestion];
             const questionContainer = document.getElementById('question');
             const formattedQuestion = questionData.question.replace(/\\n/g, '<br>');
@@ -599,60 +449,7 @@
             displayQuestion();
         }
 
-        // デバッグモードの切り替え
-        document.getElementById('debugMode').addEventListener('change', function(e) {
-            isDebugMode = e.target.checked;
-            document.getElementById('debugQuestionNumber').style.display = isDebugMode ? 'block' : 'none';
-            document.getElementById('questionCount').disabled = isDebugMode;
-        });
-        document.querySelectorAll('input[name="debugModeType"]').forEach(radio => {
-            radio.addEventListener('change', function(e) {
-                const isSingle = e.target.value === 'single';
-                document.getElementById('singleQuestionInput').style.display = isSingle ? 'flex' : 'none';
-                document.getElementById('rangeQuestionInput').style.display = isSingle ? 'none' : 'flex';
-            });
-        });
-        document.getElementById('showAnswer').addEventListener('change', function(e) {
-            showAnswer = e.target.checked;
-            if (isDebugMode) {
-                displayQuestion();
-            }
-        });
-        document.addEventListener('DOMContentLoaded', function() {
-            const decreaseBtn = document.getElementById('decreaseQuestionCount');
-            const increaseBtn = document.getElementById('increaseQuestionCount');
-            const decreaseBtn10 = document.getElementById('decreaseQuestionCount10');
-            const increaseBtn10 = document.getElementById('increaseQuestionCount10');
-            const display = document.getElementById('questionCountDisplay');
-            decreaseBtn.addEventListener('click', function() {
-                if (questionCount > minQuestionCount) {
-                    questionCount--;
-                    if (questionCount < minQuestionCount) questionCount = minQuestionCount;
-                    display.textContent = questionCount;
-                }
-            });
-            increaseBtn.addEventListener('click', function() {
-                if (questionCount < maxQuestionCount) {
-                    questionCount++;
-                    if (questionCount > maxQuestionCount) questionCount = maxQuestionCount;
-                    display.textContent = questionCount;
-                }
-            });
-            decreaseBtn10.addEventListener('click', function() {
-                if (questionCount > minQuestionCount) {
-                    questionCount -= 10;
-                    if (questionCount < minQuestionCount) questionCount = minQuestionCount;
-                    display.textContent = questionCount;
-                }
-            });
-            increaseBtn10.addEventListener('click', function() {
-                if (questionCount < maxQuestionCount) {
-                    questionCount += 10;
-                    if (questionCount > maxQuestionCount) questionCount = maxQuestionCount;
-                    display.textContent = questionCount;
-                }
-            });
-        });
+
 
         // 差分をハイライトする関数（簡易版: 文字単位で異なる部分を赤色で表示）
         function diffStrings(user, correct) {
@@ -694,7 +491,50 @@
 
         function startQuizWithFullScreen() {
             enterFullScreen();
-            loadQuestions();
+            startDefaultQuiz();
+        }
+
+        // リトライボタン機能を追加
+        function showRetryButton() {
+            const retryButton = document.createElement('button');
+            retryButton.textContent = 'リトライ';
+            retryButton.style.cssText = `
+                display: block;
+                margin: 20px auto;
+                padding: 15px 30px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 18px;
+                cursor: pointer;
+                width: 200px;
+            `;
+            retryButton.onmouseover = function() {
+                this.style.backgroundColor = '#0056b3';
+            };
+            retryButton.onmouseout = function() {
+                this.style.backgroundColor = '#007bff';
+            };
+            retryButton.onclick = function() {
+                // リトライボタンを削除
+                this.remove();
+                // メインメニューを再表示
+                document.querySelector('.main-menu').style.display = 'block';
+                document.getElementById('settingsFrame').style.display = 'none';
+                // 問題とオプションをクリア
+                document.getElementById('question').innerHTML = '';
+                document.getElementById('answerInputContainer').style.display = 'none';
+                document.getElementById('nextButton').style.display = 'none';
+                // プログレスバーをリセット
+                updateProgressBar(0);
+                // タイマーを必ず非表示にする
+                document.getElementById('timer').style.display = 'none';
+                stopTimer(); // タイマーを停止
+            };
+            document.getElementById('question').appendChild(retryButton);
+            document.querySelector('.progress-container').style.display = 'none'; // リトライボタンを表示したらプログレスバーを非表示に
+            stopTimer(); // リトライボタンを表示したらタイマーを停止
         }
 
         // ページ離脱時の警告
@@ -718,6 +558,201 @@
             } else {
                 document.getElementById('errorMessage').style.display = 'block';
             }
+        }
+
+        // iframeからのメッセージを受信
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'START_QUIZ') {
+                loadQuestionsWithSettings(event.data.settings);
+            } else if (event.data.type === 'GO_BACK') {
+                // 設定画面から戻る
+                document.querySelector('.main-menu').style.display = 'block';
+                document.getElementById('settingsFrame').style.display = 'none';
+            }
+        });
+
+        function openSettings() {
+            document.querySelector('.main-menu').style.display = 'none';
+            document.getElementById('settingsFrame').style.display = 'block';
+        }
+
+        function startDefaultQuiz() {
+            // localStorageから設定を取得
+            let settings = {
+                selectedFile: 'CSV/JHI.csv',
+                questionCount: 5,
+                isDebugMode: false,
+                showAnswer: true,
+                debugModeType: 'single',
+                specificQuestion: '',
+                questionRangeStart: '',
+                questionRangeEnd: ''
+            };
+            const saved = localStorage.getItem('historyQuizSettings');
+            if (saved) {
+                Object.assign(settings, JSON.parse(saved));
+            }
+            loadQuestionsWithSettings(settings);
+        }
+
+        function loadQuestionsWithSettings(settings) {
+            const selectedFiles = settings.selectedFiles || [settings.selectedFile]; // 複数ファイル対応
+            questionCount = settings.questionCount;
+            isDebugMode = settings.isDebugMode;
+            showAnswer = settings.showAnswer;
+            
+            const startIndex = 2;
+            const chartContainer = document.getElementById('chartContainer');
+            chartContainer.innerHTML = '';
+
+            document.getElementById('loading').style.display = 'block';
+            startTimer();
+
+            // 複数ファイルを順次読み込み
+            loadMultipleFiles(selectedFiles, startIndex);
+        }
+
+        // 複数ファイルを読み込む関数
+        function loadMultipleFiles(files, startIndex) {
+            let allQuestions = [];
+            let filesProcessed = 0;
+            
+            files.forEach((file, index) => {
+                fetch(file)
+                    .then(response => response.text())
+                    .then(csv => {
+                        const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
+                        const actualEndIndex = lines.length - 1;
+                        
+                        // 指定した範囲内の問題のみを抽出
+                        for (let i = startIndex; i <= actualEndIndex; i++) {
+                            const data = parseCSVLine(lines[i]);
+                            if (data.length < 5 || isNaN(parseInt(data[0]))) continue;
+                            const choices = data.slice(2, 6)
+                                .filter(choice => choice)
+                                .map(choice => {
+                                    choice = choice.trim();
+                                    if (choice.startsWith('"') && choice.endsWith('"')) {
+                                        choice = choice.slice(1, -1);
+                                    }
+                                    if (choice.startsWith("'")) {
+                                        choice = choice.slice(1);
+                                    }
+                                    return choice;
+                                });
+                            if (choices.length === 0) continue;
+                            allQuestions.push({
+                                number: parseInt(data[0]),
+                                question: data[1],
+                                answer: choices[0],
+                                image: data[6] || null,
+                                sourceFile: file
+                            });
+                        }
+                        
+                        filesProcessed++;
+                        
+                        // すべてのファイルが処理されたら次の処理を実行
+                        if (filesProcessed === files.length) {
+                            processAllQuestions(allQuestions);
+                        }
+                    })
+                    .catch(error => {
+                        console.error(`ファイル ${file} の読み込みエラー:`, error);
+                        filesProcessed++;
+                        
+                        // エラーがあっても他のファイルの処理を続行
+                        if (filesProcessed === files.length) {
+                            processAllQuestions(allQuestions);
+                        }
+                    });
+            });
+        }
+
+        // すべての問題を処理する関数
+        function processAllQuestions(allQuestions) {
+            questions = [];
+
+            // questions配列を問題番号でソート
+            allQuestions.sort((a, b) => a.number - b.number);
+            
+            // 重複する問題番号を処理（後から読み込まれたファイルを優先）
+            const uniqueQuestions = [];
+            const seenNumbers = new Set();
+            
+            for (let i = allQuestions.length - 1; i >= 0; i--) {
+                const question = allQuestions[i];
+                if (!seenNumbers.has(question.number)) {
+                    uniqueQuestions.unshift(question);
+                    seenNumbers.add(question.number);
+                }
+            }
+            
+            questions = uniqueQuestions;
+            maxQuestionCount = questions.length;
+            
+            if (questionCount > maxQuestionCount) {
+                questionCount = maxQuestionCount;
+            }
+            if (maxQuestionCount === 0) {
+                alert('問題データが正しくありません。または指定された範囲に問題がありません。');
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+            if (isDebugMode && currentSettings.debugModeType === 'single') {
+                const specificNumber = parseInt(currentSettings.specificQuestion);
+                if (isNaN(specificNumber) || specificNumber < minQuestionCount || specificNumber > maxQuestionCount) {
+                    alert(`有効な問題番号を入力してください (${minQuestionCount}～${maxQuestionCount})`);
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                const found = questions.find(q => q.number === specificNumber);
+                if (found) {
+                    selectedQuestions = [found];
+                } else {
+                    alert(`指定した問題番号(${specificNumber})が見つかりません。`);
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                currentQuestion = 0;
+                score = 0;
+                userAnswers = [];
+                displayQuestion();
+            } else if (isDebugMode && currentSettings.debugModeType === 'range') {
+                const rangeStart = parseInt(currentSettings.questionRangeStart);
+                const rangeEnd = parseInt(currentSettings.questionRangeEnd);
+                if (isNaN(rangeStart) || isNaN(rangeEnd) || rangeStart < minQuestionCount || rangeEnd > maxQuestionCount || rangeEnd < rangeStart) {
+                    alert(`有効な問題番号の範囲を入力してください (${minQuestionCount}～${maxQuestionCount})`);
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                selectedQuestions = questions.filter(q => {
+                    const qNum = parseInt(q.number);
+                    return qNum >= rangeStart && qNum <= rangeEnd;
+                });
+                if (selectedQuestions.length === 0) {
+                    alert('指定された範囲に問題が見つかりません。');
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                currentQuestion = 0;
+                score = 0;
+                userAnswers = [];
+                displayQuestion();
+            } else {
+                if (questionCount === 0) {
+                    alert('選択したファイルに有効な問題が見つかりませんでした。');
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                shuffleArray(questions);
+                selectedQuestions = questions.slice(0, questionCount);
+                currentQuestion = 0;
+                score = 0;
+                userAnswers = [];
+                displayQuestion();
+            }
+            document.getElementById('loading').style.display = 'none';
         }
 
     </script>

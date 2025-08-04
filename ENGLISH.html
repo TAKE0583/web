@@ -328,12 +328,12 @@
                     </div>
                 </div>
                 <div id="settingsFrame" class="settings-frame" style="display: none;">
-                    <iframe src="settings.html" width="100%" height="400" frameborder="0"></iframe>
+                    <iframe src="settings.html?subject=english" width="100%" height="400" frameborder="0"></iframe>
                 </div>
             </div>
             <div id="loading" class="loading">読み込み中...</div>
             <div id="question" class="question"></div>
-            <div class="progress-container">
+            <div class="progress-container" style="display: none;">
                 <div id="progressBar" class="progress-bar">0%</div>
             </div>
             <div id="options" class="options"></div>
@@ -415,7 +415,7 @@
     
         function loadQuestions(settings) {
             currentSettings = settings;
-            const selectedFile = settings.selectedFile;
+            const selectedFiles = settings.selectedFiles || [settings.selectedFile]; // 複数ファイル対応
             questionCount = settings.questionCount;
             isDebugMode = settings.isDebugMode;
             showAnswer = settings.showAnswer;
@@ -443,154 +443,194 @@
     
             document.getElementById('loading').style.display = 'block';
     
-            fetch(selectedFile)
-                .then(response => response.text())
-                .then(csv => {
-                    const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
-                    questions = [];
-                    partsOfSpeechStats = {};
-                    dontKnowStats = {};
+            // 複数ファイルを順次読み込み
+            loadMultipleFiles(selectedFiles, startIndex);
+        }
+
+        // 複数ファイルを読み込む関数
+        function loadMultipleFiles(files, startIndex) {
+            let allQuestions = [];
+            let filesProcessed = 0;
+            
+            files.forEach((file, index) => {
+                fetch(file)
+                    .then(response => response.text())
+                    .then(csv => {
+                        const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
+                        const actualEndIndex = lines.length - 1;
+                        
+                        // 指定した範囲内の問題のみを抽出
+                        for (let i = startIndex; i <= actualEndIndex; i++) {
+                            const data = parseCSVLine(lines[i]);
+                            // 問題番号が不正な場合はスキップ
+                            if (data.length < 5 || isNaN(parseInt(data[0]))) continue;
     
-                    // CSVファイルの実際の終了行を endIndex として設定
-                    const actualEndIndex = lines.length - 1;
+                            // 選択肢を配列として取得
+                            const choices = data.slice(2, 6)
+                                .filter(choice => choice)
+                                .map(choice => {
+                                    choice = choice.trim();
+                                    if (choice.startsWith('"') && choice.endsWith('"')) {
+                                        choice = choice.slice(1, -1);
+                                    }
+                                    if (choice.startsWith("'")) {
+                                        choice = choice.slice(1);
+                                    }
+                                    return choice;
+                                });
     
-                    // 指定した範囲内の問題のみを抽出
-                    for (let i = startIndex; i <= actualEndIndex; i++) {
-                        const data = parseCSVLine(lines[i]);
-                        // 問題番号が不正な場合はスキップ
-                        if (data.length < 5 || isNaN(parseInt(data[0]))) continue;  // 最低限必要な列数チェックと問題番号の数値チェック
+                            if (choices.length === 0) continue;
     
-                        // 選択肢を配列として取得
-                        const choices = data.slice(2, 6)
-                            .filter(choice => choice)
-                            .map(choice => {
-                                choice = choice.trim();
-                                if (choice.startsWith('"') && choice.endsWith('"')) {
-                                    choice = choice.slice(1, -1);
-                                }
-                                if (choice.startsWith("'")) {
-                                    choice = choice.slice(1);
-                                }
-                                return choice;
+                            allQuestions.push({
+                                number: parseInt(data[0]), // 問題番号を数値として格納
+                                question: data[1],
+                                choices: choices,
+                                answer: choices[0],  // 選択肢1が正解
+                                image: data[6] || null,
+                                sourceFile: file // どのファイルから来たかを記録
                             });
-    
-                        if (choices.length === 0) continue;
-    
-                        questions.push({
-                            number: parseInt(data[0]), // 問題番号を数値として格納
-                            question: data[1],
-                            choices: choices,
-                            answer: choices[0],  // 選択肢1が正解
-                            image: data[6] || null
-                        });
-                    }
-
-                    // questions配列を問題番号でソート（範囲指定時に順番を保証するため）
-                    questions.sort((a, b) => a.number - b.number);
-    
-                    // 読み込んだ問題の総数を maxQuestionCount に設定
-                    maxQuestionCount = questions.length;
-
-                    // UI上の出題数が現在のmaxQuestionCountを超える場合は調整
-                    if (questionCount > maxQuestionCount) {
-                        questionCount = maxQuestionCount;
-                        document.getElementById('questionCountDisplay').textContent = questionCount;
-                    }
-                    // 問題数が0の場合はアラート
-                    if (maxQuestionCount === 0) {
-                        alert('問題データが正しくありません。または指定された範囲に問題がありません。');
-                        document.getElementById('loading').style.display = 'none';
-                        return;
-                    }
-
-                    // デバッグモードの単一問題指定対応
-                    if (isDebugMode && settings.debugModeType === 'single') {
-                        const specificNumber = parseInt(settings.specificQuestion);
-                        
-                        if (isNaN(specificNumber) || specificNumber < minQuestionCount || specificNumber > maxQuestionCount) {
-                            alert(`有効な問題番号を入力してください (${minQuestionCount}～${maxQuestionCount})`);
-                            document.getElementById('loading').style.display = 'none';
-                            return;
-                        }
-
-                        const found = questions.find(q => q.number === specificNumber);
-                        if (found) {
-                            selectedQuestions = [found];
-                        } else {
-                            alert(`指定した問題番号(${specificNumber})が見つかりません。`);
-                            document.getElementById('loading').style.display = 'none';
-                            return;
-                        }
-                        currentQuestion = 0;
-                        score = 0;
-                        wrongAnswers = 0;
-                        displayQuestion();
-                    } else if (isDebugMode && settings.debugModeType === 'range') {
-                        // デバッグモードの範囲指定対応
-                        const rangeStart = parseInt(settings.questionRangeStart);
-                        const rangeEnd = parseInt(settings.questionRangeEnd);
-                        
-                        if (isNaN(rangeStart) || isNaN(rangeEnd) || rangeStart < minQuestionCount || rangeEnd > maxQuestionCount || rangeEnd < rangeStart) {
-                            alert(`有効な問題番号の範囲を入力してください (${minQuestionCount}～${maxQuestionCount})`);
-                            document.getElementById('loading').style.display = 'none';
-                            return;
-                        }
-
-                        selectedQuestions = questions.filter(q => {
-                            const qNum = parseInt(q.number);
-                            return qNum >= rangeStart && qNum <= rangeEnd;
-                        });
-
-                        if (selectedQuestions.length === 0) {
-                            alert('指定された範囲に問題が見つかりません。');
-                            document.getElementById('loading').style.display = 'none';
-                            return;
                         }
                         
-                        // 範囲指定の場合はシャッフルしない（questions配列が既に問題番号でソートされているため）
-
-                        currentQuestion = 0;
-                        score = 0;
-                        wrongAnswers = 0;
-                        displayQuestion();
-                    } else {
-                        // 通常モード
-                        if (questionCount === 0) { // ファイルは読み込めたが、問題が一つもない場合
-                            alert('選択したファイルに有効な問題が見つかりませんでした。');
-                            document.getElementById('loading').style.display = 'none';
-                            return;
-                        }
-                        shuffleArray(questions);
-                        selectedQuestions = questions.slice(0, questionCount);
-                        currentQuestion = 0;
-                        score = 0;
-                        wrongAnswers = 0;
-                        displayQuestion();
+                        filesProcessed++;
                         
-                        // 設定iframeに最大問題数を送信
-                        const settingsFrame = document.getElementById('settingsFrame');
-                        if (settingsFrame && settingsFrame.contentWindow) {
-                            settingsFrame.contentWindow.postMessage({
-                                type: 'UPDATE_MAX_QUESTIONS',
-                                maxQuestions: maxQuestionCount
-                            }, '*');
+                        // すべてのファイルが処理されたら次の処理を実行
+                        if (filesProcessed === files.length) {
+                            processAllQuestions(allQuestions);
                         }
-                    }
+                    })
+                    .catch(error => {
+                        console.error(`ファイル ${file} の読み込みエラー:`, error);
+                        filesProcessed++;
+                        
+                        // エラーがあっても他のファイルの処理を続行
+                        if (filesProcessed === files.length) {
+                            processAllQuestions(allQuestions);
+                        }
+                    });
+            });
+        }
+
+        // すべての問題を処理する関数
+        function processAllQuestions(allQuestions) {
+            questions = [];
+            partsOfSpeechStats = {};
+            dontKnowStats = {};
+
+            // questions配列を問題番号でソート（範囲指定時に順番を保証するため）
+            allQuestions.sort((a, b) => a.number - b.number);
+            
+            // 重複する問題番号を処理（後から読み込まれたファイルを優先）
+            const uniqueQuestions = [];
+            const seenNumbers = new Set();
+            
+            for (let i = allQuestions.length - 1; i >= 0; i--) {
+                const question = allQuestions[i];
+                if (!seenNumbers.has(question.number)) {
+                    uniqueQuestions.unshift(question);
+                    seenNumbers.add(question.number);
+                }
+            }
+            
+            questions = uniqueQuestions;
     
+            // 読み込んだ問題の総数を maxQuestionCount に設定
+            maxQuestionCount = questions.length;
+
+            // UI上の出題数が現在のmaxQuestionCountを超える場合は調整
+            if (questionCount > maxQuestionCount) {
+                questionCount = maxQuestionCount;
+                document.getElementById('questionCountDisplay').textContent = questionCount;
+            }
+            // 問題数が0の場合はアラート
+            if (maxQuestionCount === 0) {
+                alert('問題データが正しくありません。または指定された範囲に問題がありません。');
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+
+            // デバッグモードの単一問題指定対応
+            if (isDebugMode && currentSettings.debugModeType === 'single') {
+                const specificNumber = parseInt(currentSettings.specificQuestion);
+                
+                if (isNaN(specificNumber) || specificNumber < minQuestionCount || specificNumber > maxQuestionCount) {
+                    alert(`有効な問題番号を入力してください (${minQuestionCount}～${maxQuestionCount})`);
                     document.getElementById('loading').style.display = 'none';
-                    startTimer(); // 問題が読み込まれたらタイマーを開始
-                })
-                .catch(error => {
-                    console.error('エラー:', error);
-                    alert('ファイルの読み込みに失敗しました。');
+                    return;
+                }
+
+                const found = questions.find(q => q.number === specificNumber);
+                if (found) {
+                    selectedQuestions = [found];
+                } else {
+                    alert(`指定した問題番号(${specificNumber})が見つかりません。`);
                     document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                currentQuestion = 0;
+                score = 0;
+                wrongAnswers = 0;
+                displayQuestion();
+            } else if (isDebugMode && currentSettings.debugModeType === 'range') {
+                // デバッグモードの範囲指定対応
+                const rangeStart = parseInt(currentSettings.questionRangeStart);
+                const rangeEnd = parseInt(currentSettings.questionRangeEnd);
+                
+                if (isNaN(rangeStart) || isNaN(rangeEnd) || rangeStart < minQuestionCount || rangeEnd > maxQuestionCount || rangeEnd < rangeStart) {
+                    alert(`有効な問題番号の範囲を入力してください (${minQuestionCount}～${maxQuestionCount})`);
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+
+                selectedQuestions = questions.filter(q => {
+                    const qNum = parseInt(q.number);
+                    return qNum >= rangeStart && qNum <= rangeEnd;
                 });
+
+                if (selectedQuestions.length === 0) {
+                    alert('指定された範囲に問題が見つかりません。');
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                
+                // 範囲指定の場合はシャッフルしない（questions配列が既に問題番号でソートされているため）
+
+                currentQuestion = 0;
+                score = 0;
+                wrongAnswers = 0;
+                displayQuestion();
+            } else {
+                // 通常モード
+                if (questionCount === 0) { // ファイルは読み込めたが、問題が一つもない場合
+                    alert('選択したファイルに有効な問題が見つかりませんでした。');
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                shuffleArray(questions);
+                selectedQuestions = questions.slice(0, questionCount);
+                currentQuestion = 0;
+                score = 0;
+                wrongAnswers = 0;
+                displayQuestion();
+                
+                // 設定iframeに最大問題数を送信
+                const settingsFrame = document.getElementById('settingsFrame');
+                if (settingsFrame && settingsFrame.contentWindow) {
+                    settingsFrame.contentWindow.postMessage({
+                        type: 'UPDATE_MAX_QUESTIONS',
+                        maxQuestions: maxQuestionCount
+                    }, '*');
+                }
+            }
+    
+            document.getElementById('loading').style.display = 'none';
+            startTimer(); // 問題が読み込まれたらタイマーを開始
+
         }
     
         function displayQuestion() {
             if (currentQuestion >= selectedQuestions.length) {
                 stopTimer();
-                document.getElementById('progressBar').style.display = 'none';
+                document.querySelector('.progress-container').style.display = 'none';
                 document.getElementById('question').innerText = '終了！';
                 document.getElementById('question').style.textAlign = 'center';
                 document.getElementById('options').innerHTML = '';
@@ -612,7 +652,7 @@
                 
                 return;
             }
-            document.getElementById('progressBar').style.display = 'block';
+            document.querySelector('.progress-container').style.display = 'block';
         
             const questionData = selectedQuestions[currentQuestion];
             const questionContainer = document.getElementById('question');
@@ -759,10 +799,12 @@
                 document.getElementById('nextButton').style.display = 'none';
                 // プログレスバーをリセット
                 updateProgressBar(0);
-                startTimer(); // リトライしたらタイマーを再開
+                // タイマーを必ず非表示にする
+                document.getElementById('timer').style.display = 'none';
+                stopTimer(); // タイマーを停止
             };
             document.getElementById('question').appendChild(retryButton);
-            document.getElementById('progressBar').style.display = 'none'; // リトライボタンを表示したらプログレスバーを非表示に
+            document.querySelector('.progress-container').style.display = 'none'; // リトライボタンを表示したらプログレスバーを非表示に
             stopTimer(); // リトライボタンを表示したらタイマーを停止
         }
 
@@ -826,7 +868,7 @@
 
         function endQuizEarly() {
             stopTimer();
-            document.getElementById('progressBar').style.display = 'none';
+            document.querySelector('.progress-container').style.display = 'none';
             document.getElementById('question').innerText = '赤信号が3つ点灯しました！';
             document.getElementById('question').style.textAlign = 'center';
             document.getElementById('options').innerHTML = '';
